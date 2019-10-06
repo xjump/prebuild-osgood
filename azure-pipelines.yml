@@ -1,0 +1,211 @@
+trigger:
+- master
+
+jobs:
+- job: "BuildOsgood"
+  timeoutInMinutes: 240
+  strategy:
+    matrix:
+      linux:
+        imageName: "ubuntu-16.04"
+      mac:
+        imageName: "macos-10.13"
+      windows:
+        imageName: "vs2017-win2016"
+        python.version: '2.7'
+    maxParallel: 30
+  pool:
+    vmImage: $(imageName)
+
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '2.7'
+        addToPath: true 
+        architecture: 'x64'
+
+    - task: NodeTool@0 
+      inputs:
+        versionSpec: '12'
+
+    - script: npm install -g webpack
+    
+    - script: |
+        sudo apt update
+        sudo apt install -y build-essential pkg-config libc++-dev libc++abi-dev clang libclang-dev libssl-dev
+      condition: eq( variables['Agent.OS'], 'Linux' )
+
+    # Linux
+    - bash: |
+        export V8_DIR=$HOME/v8
+        export V8_VERSION=7.9.110
+        export BUILD_DIR=$HOME/buildout
+        chmod +x build_linux_and_mac.sh
+        ./build_linux_and_mac.sh
+      condition: eq( variables['Agent.OS'], 'Linux' )
+      displayName: Build osgood on Linux
+
+
+    # macOS
+    - bash: |
+        export V8_DIR=$HOME/v8
+        export V8_VERSION=7.9.110
+        export BUILD_DIR=$HOME/buildout
+        chmod +x build_linux_and_mac.sh
+        ./build_linux_and_mac.sh
+      condition: eq( variables['Agent.OS'], 'Darwin' )
+      displayName: Build osgood on macOS
+
+    # Windows
+    - powershell: |
+        Set-Variable -Name V8_VERSION -Value '7.9.110'
+        Set-Variable -Name V8_DIR -Value "$HOME/v8"
+        Set-Variable -Name BUILD_DIR -Value "$HOME/buildout"
+        Write-Host $V8_VERSION
+
+        mkdir $BUILD_DIR
+        $Env:BUILDDIR=$Env:HOME+'\buildout'
+        Write-Host "##vso[task.setvariable variable=BUILD_DIR]$Env:BUILDDIR"
+        Write-Host "##vso[task.setvariable variable=V8_VERSION]7.9.110"
+       
+        $Env:RUST_BACKTRACE='full'
+        $Env:DEPOT_TOOLS_WIN_TOOLCHAIN=0
+        $Env:GYP_MSVS_VERSION=2017
+        $Env:DEPOT_TOOLS_UPDATE=0 
+        $Env:GYP_CHROMIUM_NO_ACTION=0
+        $Env:VPYTHON_BYPASS='manually managed python not supported by chrome operations'
+        $custom_v8 = $HOME + '/v8'
+        $Env:CUSTOM_V8 = $custom_v8
+        echo $HOME
+
+        
+
+
+        ########################################################################
+        ###    build v8
+        ########################################################################
+        
+        rustup update
+        rustup component add rustfmt
+        git config --global core.symlinks true
+        cd $HOME
+        # https://storage.googleapis.com/chrome-infra/depot_tools.zip
+        # Download the file
+        $clnt = new-object System.Net.WebClient
+        $url = "https://storage.googleapis.com/chrome-infra/depot_tools.zip"
+        $file = "c:\depot_tools.zip"
+        $clnt.DownloadFile($url,$file)
+
+        # Unzip the file to current location
+        $shell_app=new-object -com shell.application 
+        $zip_file = $shell_app.namespace($file)
+        mkdir  $HOME/depot_tools
+        $destination = $shell_app.namespace("$HOME\depot_tools") 
+        $destination.Copyhere($zip_file.items())
+
+        $Env:path = "$HOME/depot_tools;" + $Env:path
+
+        cd $HOME
+        fetch v8
+        cd v8
+
+        git checkout $V8_VERSION
+        gclient sync
+
+        $vcvarsall_dir = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build"
+        cd $vcvarsall_dir
+        .\vcvarsall.bat x64
+
+        cd $HOME
+        cd v8
+
+        gn gen --ide=vs2017 --args="v8_monolithic=true is_clang=false v8_use_external_startup_data=false use_custom_libcxx=false is_debug=false v8_static_library=true" out.gn\x64.release
+        # ninja -C out.gn/x64.release
+        # devenv out\Default\all.sln
+
+        #tools/dev/v8gen.py x64.release -- v8_monolithic=true v8_use_external_startup_data=false use_custom_libcxx=false is_debug=false v8_static_library=true
+        tools/dev/v8gen.py list
+
+        cd $HOME/v8/out.gn/x64.release
+        
+        ninja
+
+        cd $HOME/v8 
+        del ./.git -Force -Recurse
+        dir $HOME/v8/out.gn/x64.release
+        dir $HOME/v8/out.gn/x64.release/obj
+        
+        ########################################################################
+        ###    build osgood
+        ########################################################################
+        cd $HOME
+        git clone https://github.com/xjump/osgood.git
+
+        cd $HOME/osgood
+        
+        cd $HOME/osgood/js
+        npm install 
+        npm audit fix
+
+        cd $HOME/osgood
+        
+        Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        choco install llvm 
+
+        cargo build --release -vv
+        dir target/release
+
+        cd $HOME/osgood
+        del ./.git -Force -Recurse
+
+      condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      displayName: Build osgood on Windows
+
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(BUILD_DIR)/../osgood/target/release/*.exe' 
+        includeRootFolder: true 
+        archiveType: 'zip' # Options: zip, 7z, tar, wim
+        #tarCompression: 'gz' # Optional. Options: gz, bz2, xz, none
+        archiveFile: '$(BUILD_DIR)/prebuilt-windows-$(V8_VERSION).zip' 
+        replaceExistingArchive: true 
+        verbose: false # Optional
+        #quiet: # Optional
+      condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      displayName: Zip on Windows
+
+
+    - task: GithubRelease@0 
+      displayName: 'Create GitHub Release on Windows'      
+      inputs:
+        gitHubConnection: 'xjump_token'
+        repositoryName: 'xjump/prebuild-osgood'
+        action: 'edit'
+        addChangeLog: false
+        target: '$(build.sourceVersion)'
+        tagSource: 'Git tag'
+        tag: '1.0'
+        assetUploadMode: 'replace'
+        assets: |
+          $(BUILD_DIR)/*.zip
+      condition: eq( variables['Agent.OS'], 'Windows_NT' )
+
+
+    - task: GithubRelease@0 
+      displayName: 'Create GitHub Release on Linux or macOS'      
+      inputs:
+        gitHubConnection: 'xjump_token'
+        repositoryName: 'xjump/prebuild-osgood'
+        action: 'edit'
+        addChangeLog: false
+        target: '$(build.sourceVersion)'
+        tagSource: 'Git tag'
+        tag: '1.0'
+        assetUploadMode: 'replace'
+        assets: |
+          $(HOME)/buildout/*.zip
+      condition: not ( eq( variables['Agent.OS'], 'Windows_NT' ) )
+
+
+
