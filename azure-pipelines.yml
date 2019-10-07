@@ -89,20 +89,21 @@ jobs:
         rustup component add rustfmt
         git config --global core.symlinks true
         cd $HOME
-        # https://storage.googleapis.com/chrome-infra/depot_tools.zip
-        # Download the file
-        $clnt = new-object System.Net.WebClient
-        $url = "https://storage.googleapis.com/chrome-infra/depot_tools.zip"
-        $file = "c:\depot_tools.zip"
-        $clnt.DownloadFile($url,$file)
+        ## https://storage.googleapis.com/chrome-infra/depot_tools.zip
+        ## Download the file
+        #$clnt = new-object System.Net.WebClient
+        #$url = "https://storage.googleapis.com/chrome-infra/depot_tools.zip"
+        #$file = "c:\depot_tools.zip"
+        #$clnt.DownloadFile($url,$file)
 
-        # Unzip the file to current location
-        $shell_app=new-object -com shell.application 
-        $zip_file = $shell_app.namespace($file)
-        mkdir  $HOME/depot_tools
-        $destination = $shell_app.namespace("$HOME\depot_tools") 
-        $destination.Copyhere($zip_file.items())
+        ## Unzip the file to current location
+        #$shell_app=new-object -com shell.application 
+        #$zip_file = $shell_app.namespace($file)
+        #mkdir  $HOME/depot_tools
+        #$destination = $shell_app.namespace("$HOME\depot_tools") 
+        #$destination.Copyhere($zip_file.items())
 
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         $Env:path = "$HOME/depot_tools;" + $Env:path
 
         cd $HOME
