@@ -72,8 +72,8 @@ jobs:
         $Env:DEPOT_TOOLS_WIN_TOOLCHAIN=0
         $Env:GYP_MSVS_VERSION=2017
         # $Env:DEPOT_TOOLS_UPDATE=0 
-        $Env:GYP_CHROMIUM_NO_ACTION=0
-        $Env:VPYTHON_BYPASS='manually managed python not supported by chrome operations'
+        # $Env:GYP_CHROMIUM_NO_ACTION=0
+        # $Env:VPYTHON_BYPASS='manually managed python not supported by chrome operations'
         $custom_v8 = $HOME + '/v8'
         $Env:CUSTOM_V8 = $custom_v8
         echo $HOME
