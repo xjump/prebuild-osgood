@@ -119,7 +119,7 @@ jobs:
         cd $HOME
         cd v8
 
-        gn gen --ide=vs2017 --args="v8_monolithic=true is_clang=false v8_use_external_startup_data=false use_custom_libcxx=false is_debug=false v8_static_library=true" out.gn\x64.release
+        gn gen --ide=vs2017 --args="v8_monolithic=true is_clang=false v8_use_external_startup_data=true use_custom_libcxx=false is_debug=false v8_static_library=true" out.gn\x64.release
         # ninja -C out.gn/x64.release
         # devenv out\Default\all.sln
 
