@@ -58,7 +58,7 @@ jobs:
 
     # Windows
     - powershell: |
-        Set-Variable -Name V8_VERSION -Value '7.9.110'
+        Set-Variable -Name V8_VERSION -Value '7.8.285'
         Set-Variable -Name V8_DIR -Value "$HOME/v8"
         Set-Variable -Name BUILD_DIR -Value "$HOME/buildout"
         Write-Host $V8_VERSION
@@ -66,7 +66,7 @@ jobs:
         mkdir $BUILD_DIR
         $Env:BUILDDIR=$Env:HOME+'\buildout'
         Write-Host "##vso[task.setvariable variable=BUILD_DIR]$Env:BUILDDIR"
-        Write-Host "##vso[task.setvariable variable=V8_VERSION]7.9.110"
+        Write-Host "##vso[task.setvariable variable=V8_VERSION]7.8.285"
        
         $Env:RUST_BACKTRACE='full'
         $Env:DEPOT_TOOLS_WIN_TOOLCHAIN=0
