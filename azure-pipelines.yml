@@ -103,7 +103,7 @@ jobs:
         #$destination = $shell_app.namespace("$HOME\depot_tools") 
         #$destination.Copyhere($zip_file.items())
 
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        git clone -q https://chromium.googlesource.com/chromium/tools/depot_tools.git
         $Env:path = "$HOME/depot_tools;" + $Env:path
 
         cd $HOME
@@ -140,7 +140,7 @@ jobs:
         ###    build osgood
         ########################################################################
         cd $HOME
-        git clone https://github.com/xjump/osgood.git
+        git clone -q https://github.com/xjump/osgood.git
 
         cd $HOME/osgood
         
