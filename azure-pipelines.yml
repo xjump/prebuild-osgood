@@ -86,7 +86,7 @@ jobs:
         ########################################################################
         
         rustup update
-        rustup component add rustfmt
+        # rustup component add rustfmt
         git config --global core.symlinks true
         cd $HOME
         ## https://storage.googleapis.com/chrome-infra/depot_tools.zip
